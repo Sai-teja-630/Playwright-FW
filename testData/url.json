@@ -1,0 +1,14 @@
+{
+  "prod": {
+    "URL": "https://www.franklintempleton.com/"
+  },
+  "beta": {
+    "URL": ""
+  },
+  "stage": {
+    "URL": ""
+  },
+  "test": {
+    "URL": "https://the-internet.herokuapp.com"
+  }
+}

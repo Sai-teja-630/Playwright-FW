@@ -1,0 +1,20 @@
+{
+  "loginCredentials": {
+    "username": "tomsmith",
+    "password": "SuperSecretPassword!"
+  },
+  "validationMessages": {
+    "loginSuccess": "You logged into a secure area!",
+    "loginFailure": "Your username is invalid!",
+    "logoutSuccess": "You logged out of the secure area!"
+  },
+  "TC_001": {
+    "description": "Verify successful login with valid credentials",
+    "expectedTitle": "The Internet"
+  },
+  "TC_002": {
+    "description": "Verify login failure with invalid credentials",
+    "invalidUsername": "invalidUser",
+    "invalidPassword": "invalidPass"
+  }
+}
