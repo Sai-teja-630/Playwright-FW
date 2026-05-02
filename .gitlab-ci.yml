@@ -1,0 +1,49 @@
+image: node:20
+
+stages:
+  - test
+  - report
+
+variables:
+  # Caching npm dependencies makes subsequent pipelines run much faster
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - .npm/
+
+# Stage 1: Run the Playwright Tests
+playwright_tests:
+  stage: test
+  script:
+    - echo "Installing dependencies..."
+    - npm ci
+    - echo "Installing Playwright browsers and OS dependencies..."
+    - npx playwright install --with-deps
+    - echo "Running Prod Tests..."
+    - npm run test:prod
+  artifacts:
+    when: always
+    paths:
+      - allure-results/
+      - test-results/
+    expire_in: 30 days
+  allow_failure: true # This ensures the pipeline continues to generate the report even if a test fails!
+
+# Stage 2: Generate Allure Report and host on GitLab Pages
+pages:
+  stage: report
+  script:
+    - echo "Generating Allure Report..."
+    - npm ci
+    - npm run allure:generate
+    # GitLab Pages requires the hosted files to be inside a folder named 'public'
+    - mv allure-report public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
