@@ -56,34 +56,38 @@ const config = defineConfig({
     use: {
         baseURL: (require('./testData/url.json')[process.env.ENV || 'test'])?.URL,
         headless: process.env.HEADED === 'false' || !process.env.HEADED,
+        viewport: null,
         ignoreHTTPSErrors: true,
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
         trace: 'retain-on-failure',
+        launchOptions: {
+            args: ['--incognito', '--start-maximized'],
+        },
     },
 
     grep: process.env.GREP ? new RegExp(process.env.GREP) : undefined,
 
     projects: [
-        {
-            name: 'chromium',
-            use: {
-                ...devices['Desktop Chrome'],
-                channel: 'chrome', // Use your system's official Chrome
-            },
-        },
-
-
-
-
-
         // {
-        //     name: 'firefox',
+        //     name: 'chromium',
         //     use: {
-        //         ...devices['Desktop Firefox'],
-        //         viewport: { width: 1920, height: 1080 },
+        //         ...devices['Desktop Chrome'],
+        //         channel: 'chrome', // Use your system's official Chrome
         //     },
         // },
+
+
+
+
+
+        {
+            name: 'firefox',
+            use: {
+                browserName: 'firefox',
+                viewport: null,
+            },
+        },
         // {
         //     name: 'webkit',
         //     use: {
