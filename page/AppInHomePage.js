@@ -143,6 +143,65 @@ class AppInHomePage extends BasePage {
         await this.webActions.waitForElementVisible(locators.feedBackButton, "Waiting for");
     }
 
+    /**
+     * Complete Browse Literature workflow
+     * Navigates to Browse Literature page and filters by document types
+     * @param {Array<string>} documentTypes - Array of document types to filter (e.g., ['Annual Report', 'Attribution'])
+     */
+    async browseLiteratureFlow(documentTypes = []) {
+        // Step 1: Click on Financial Professional role
+        await this.webActions.clickElement(
+            locators.ftFinancialProfessionalBtn,
+            "Clicking Financial Professional button"
+        );
+
+        // Step 2: Click on Tools & Resources menu
+        await this.webActions.clickElement(
+            locators.ftToolsResourcesMenu,
+            "Clicking Tools & Resources menu button"
+        );
+
+        // Step 3: Click on Browse Literature link
+        await this.webActions.clickElement(
+            locators.ftBrowseLiteratureLink,
+            "Clicking Browse Literature link"
+        );
+
+        // Step 4: Validate Browse Literature page heading
+        await this.webActions.verifyElementVisible(
+            locators.ftBrowseLiteratureHeading,
+            "Verify Browse Literature heading is visible"
+        );
+
+        // Step 5: Click on Document Type dropdown (if document types are provided)
+        if (documentTypes && documentTypes.length > 0) {
+            await this.webActions.clickElement(
+                locators.ftDocumentTypeDropdown,
+                "Clicking Document Type dropdown button"
+            );
+
+            // Step 6: Select each document type from the filter
+            for (let i = 0; i < documentTypes.length; i++) {
+                const docType = documentTypes[i];
+                let optionLocator;
+                
+                if (docType.toLowerCase().includes('annual')) {
+                    optionLocator = locators.ftAnnualReportOption;
+                } else if (docType.toLowerCase().includes('attribution')) {
+                    optionLocator = locators.ftAttributionOption;
+                } else {
+                    throw new Error(`Unknown document type: ${docType}`);
+                }
+                
+                await this.webActions.clickElement(
+                    optionLocator,
+                    `Selecting ${docType} from Document Type dropdown`
+                );
+            }
+        }
+    }
+
+
 
 
 }

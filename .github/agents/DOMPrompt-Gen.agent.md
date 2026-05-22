@@ -601,7 +601,6 @@ For this workspace, follow **this exact pattern** from `page/AppInHomePage.js`:
 ```javascript
 const { locators } = require("../Selectors/selectors");
 const { BasePage } = require("./BasePage");
-const { step } = require("allure-js-commons");
 
 class [PageName]Page extends BasePage {
 
@@ -610,13 +609,10 @@ class [PageName]Page extends BasePage {
     }
 
     async [methodName]() {
-        const self = this;
-        await step("[Step description]", async function () {
-            await self.webActions.[actionMethod](
-                locators.[selectorKey],
-                "[Description]"
-            );
-        });
+        await this.webActions.[actionMethod](
+            locators.[selectorKey],
+            "[Description]"
+        );
     }
 }
 
@@ -625,9 +621,8 @@ module.exports = { [PageName]Page };
 
 **Key rules:**
 - Always extend `BasePage`
-- Always use `const self = this;` pattern inside `step()` callbacks
-- Always wrap actions in `allure step()` blocks
-- Use `self.webActions.clickElement()`, `self.webActions.typeText()`, etc.
+- Use direct `await this.webActions.*` calls (clean and simple)
+- Use `this.webActions.clickElement()`, `this.webActions.typeText()`, etc.
 - Import locators from `../Selectors/selectors`
 - Use `module.exports = { ClassName }` (CommonJS, destructured)
 

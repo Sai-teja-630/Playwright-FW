@@ -96,6 +96,21 @@ const locators = {
     // ========================
     objKeyPressInput: "#target",
     objKeyPressResult: "#result",
+
+    // ========================
+    // Franklin Templeton - Home Page Selectors
+    // ========================
+    ftFinancialProfessionalBtn: "//h3[contains(text(),'Financial Professional')]/../..",
+    ftToolsResourcesMenu: "//button[contains(text(),'Tools & Resources')]",
+    ftBrowseLiteratureLink: "//nav[@aria-label='Mega Menu']//a[contains(text(),'Browse Literature')]",
+
+    // ========================
+    // Franklin Templeton - Browse Literature Page Selectors
+    // ========================
+    ftBrowseLiteratureHeading: "//h1[contains(text(),'Browse Literature')]",
+    ftDocumentTypeDropdown: "//*[contains(text(), 'Document Type')]/../..//button",
+    ftAnnualReportOption: "//li[@role='option'][@data-item-value='Annual Report']",
+    ftAttributionOption: "//li[@role='option'][@data-item-value='Attribution']",
 };
 
 module.exports = { locators };

@@ -13,8 +13,9 @@
     "expectedTitle": "The Internet"
   },
   "TC_002": {
-    "description": "Verify login failure with invalid credentials",
-    "invalidUsername": "invalidUser",
-    "invalidPassword": "invalidPass"
+    "description": "Browse Literature filter by document type",
+    "documentTypes": ["Annual Report", "Attribution"],
+    "expectedPage": "Browse Literature",
+    "filterApplied": "DOCUMENT_TYPE:Annual Report,Attribution"
   }
 }
