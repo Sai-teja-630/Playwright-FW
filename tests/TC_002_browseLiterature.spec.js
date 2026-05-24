@@ -22,7 +22,7 @@ test.describe('Franklin Templeton - Browse Literature', () => {
         
         // Launch the application
         await homePage.LaunchApplication();
-        
+        await homePage.acceptCookie();
         // Execute complete Browse Literature workflow
         // Navigate to Browse Literature page and filter by Annual Report and Attribution document types
         const documentTypesToFilter = ['Annual Report', 'Attribution'];

@@ -23,11 +23,25 @@ const WAIT_STRATEGY = {
     DEFAULT: 'domcontentloaded',
 };
 
+// ============================================================
+// Test Specification (Modify this array to run specific tests)
+// ============================================================
+// Usage Examples:
+// const spec = ['tests/TC_001_homePage.spec.js'];
+// const spec = ['tests/TC_001_homePage.spec.js', 'tests/TC_002_browseLiterature.spec.js'];
+// const spec = []; // Leave empty to run all tests
+const spec = [
+    // 'tests/TC_001_homePage.spec.js',
+    'tests/TC_003_franklinTempletonFundValidation.spec.js',
+
+];
+
 /**
  * Playwright Configuration
  */
 const config = defineConfig({
     testDir: './tests',
+    testMatch: spec.length > 0 ? spec : undefined,
 
     // Use centralized constants
     timeout: TIMEOUTS.NAVIGATION,

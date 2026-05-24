@@ -201,6 +201,31 @@ class AppInHomePage extends BasePage {
         }
     }
 
+    async verificationOfProductMF(fundTicker="BCAAX"){
+         await this.webActions.clickElement(locators.investmentsButton, "Click Investments menu");
+                await this.webActions.clickElement(locators.mutualFundsLink, "Click Mutual Funds link");
+                await this.webActions.waitForElementVisible(locators.mutualFundsHeading, "Wait for Mutual Funds heading");
+                const fundText = await this.webActions.getElementText(locators.mutualFundsHeading, "Get Mutual Funds heading text");
+                await this.webActions.verifyElementContainsText(locators.mutualFundsHeading, "Mutual Funds", "Verify Mutual Funds heading");
+                await this.webActions.clickElement(locators.firstFundCard, "Click first mutual fund in list");
+                await this.webActions.waitForElementVisible(locators.fundNameHeading, "Wait for fund details to load");
+                const tickerText = await this.webActions.getElementText(locators.fundTickerBCAA, "Get fund ticker");
+                await this.webActions.verifyElementText(locators.fundTickerBCAA, fundTicker, `Verify fund ticker is ${fundTicker}`);
+                await this.webActions.clickElement(locators.overviewTab, "Click Overview tab");
+                await this.webActions.waitForElementVisible(locators.overviewHeading, "Wait for Overview heading");
+                await this.webActions.verifyElementVisible(locators.overviewHeading, "Verify Overview heading is visible");
+                await this.webActions.verifyElementVisible(locators.fundFactsHeading, "Verify Fund Facts heading is visible");
+                await this.webActions.verifyElementVisible(locators.benchmarkLabel, "Verify Benchmark label is visible");
+                await this.webActions.verifyElementVisible(locators.additionalBenchmarkLabel, "Verify Additional Benchmark label is visible");
+                await this.webActions.verifyElementVisible(locators.fundInceptionDateLabel, "Verify Fund Inception Date label is visible");
+                await this.webActions.verifyElementVisible(locators.averageAnnualReturnsHeading, "Verify Average Annual Total Returns heading is visible");
+                await this.webActions.verifyElementVisible(locators.salesChargesHeading, "Verify Sales Charges heading is visible");
+                await this.webActions.verifyElementVisible(locators.topSectorsHeading, "Verify Top Sectors heading is visible");
+                await this.webActions.clickElement(locators.performanceTab, "Click Performance tab");
+                await this.webActions.waitForElementVisible(locators.performanceHeading, "Wait for Performance heading");
+                await this.webActions.verifyElementVisible(locators.performanceHeading, "Verify Performance heading is visible");
+    }
+
 
 
 
