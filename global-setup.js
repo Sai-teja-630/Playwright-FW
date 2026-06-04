@@ -1,36 +1,30 @@
-/**
- * Global Setup - Runs once before all tests
- * Used for environment validation and pre-test configuration.
- */
-
 const fs = require('fs');
 const path = require('path');
+const urlData = require('./testData/url.json');
 
 async function globalSetup() {
     const env = process.env.ENV || 'test';
-    const urlData = require('./testData/url.json');
+    const baseUrl = urlData[env]?.URL;
+    const allureResultsDir = path.join(__dirname, 'allure-results');
 
-    console.log("==========================================================================");
-    console.log(`  PLAYWRIGHT TEST FRAMEWORK - GLOBAL SETUP`);
+    console.log('==========================================================================');
+    console.log('  PLAYWRIGHT TEST FRAMEWORK - GLOBAL SETUP');
     console.log(`  Environment : ${env.toUpperCase()}`);
-    console.log(`  Base URL    : ${urlData[env]?.URL || 'NOT SET'}`);
+    console.log(`  Base URL    : ${baseUrl || 'NOT SET'}`);
     console.log(`  Timestamp   : ${new Date().toISOString()}`);
-    console.log("==========================================================================");
+    console.log('==========================================================================');
 
-    // Validate that the environment URL exists
-    if (!urlData[env] || !urlData[env].URL) {
-        console.warn(`⚠️  WARNING: URL for environment "${env}" is empty or not configured in url.json`);
+    if (!baseUrl) {
+        console.warn(`⚠️  URL for environment "${env}" is not configured in testData/url.json`);
     }
 
-    // Clean allure-results directory for fresh run
-    const allureResultsDir = path.join(__dirname, 'allure-results');
     if (fs.existsSync(allureResultsDir)) {
         fs.rmSync(allureResultsDir, { recursive: true, force: true });
-        console.log("  Cleaned allure-results directory for fresh run.");
+        console.log('  Cleaned allure-results directory for fresh run.');
     }
 
-    console.log("  Global Setup completed successfully.");
-    console.log("==========================================================================\n");
+    console.log('  Global Setup completed successfully.');
+    console.log('==========================================================================\n');
 }
 
 module.exports = globalSetup;

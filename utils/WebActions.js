@@ -368,7 +368,8 @@ class WebActions {
         if (screenshot) {
             await attachment("FAILURE SCREENSHOT", screenshot, "image/png");
         }
-        throw new Error(`[FAILED] ${description}. Error: ${error.message}`);
+        error.message = `[FAILED] ${description}. Error: ${error.message}`;
+        throw error;
     }
 
     async waitForElementVisible(locator, description = "Waiting for") {

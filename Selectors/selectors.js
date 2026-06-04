@@ -112,57 +112,57 @@ const locators = {
     ftAnnualReportOption: "//li[@role='option'][@data-item-value='Annual Report']",
     ftAttributionOption: "//li[@role='option'][@data-item-value='Attribution']",
 
-       acceptAllButton: "button:has-text('Accept All')",
+    acceptAllButton: "button:has-text('Accept All')",
     individualInvestorOption: "link:has-text('Individual Investor')",
-    
+
     // ========================
     // Main Navigation
     // ========================
     investmentsButton: "button:has-text('Investments')",
     managersButton: "button:has-text('Managers')",
     insightsButton: "button:has-text('Insights')",
-    
+
     // ========================
     // Investments Menu
     // ========================
     mutualFundsLink: "a:has-text('Mutual Funds')",
     exchangeTradedFundsLink: "a:has-text('Exchange Traded Funds')",
-    
+
     // ========================
     // Mutual Funds Page
     // ========================
     mutualFundsHeading: "h1:has-text('Mutual Funds')",
     fundsListContainer: "div[role='region']",
-    firstFundCard: "article:first-child",
-    
+    firstFundCard: "(//frk-dynamic-table//table//td//frk-product-name-cell-renderer//a)[1]",
+
     // ========================
     // Fund Details Page - BCAAX
     // ========================
-    fundTickerBCAA: "generic:has-text('BCAAX')",
+    fundTickerBCAA: "(//frk-product-title//h1//span)[1]",
     fundNameHeading: "h1:has-text('BCAAX')",
-    
+
     // ========================
     // Fund Tabs
     // ========================
-    overviewTab: "a:has-text('Overview')",
-    performanceTab: "a:has-text('Performance')",
-    portfolioTab: "a:has-text('Portfolio')",
-    distributionsTab: "a:has-text('Distributions & Tax')",
-    pricingTab: "a:has-text('Pricing')",
-    documentsTab: "a:has-text('Documents')",
-    
+    overviewTab: "//frk-sticky-nav//a[text()=' Overview ']",
+    performanceTab: "//frk-sticky-nav//a[text()=' Performance ']",
+    portfolioTab: "//frk-sticky-nav//a[text()=' Portfolio ']",
+    distributionsTab: "//frk-sticky-nav//a[text()=' Distributions & Tax ']",
+    pricingTab: "//frk-sticky-nav//a[text()=' Pricing ']",
+    documentsTab: "//frk-sticky-nav//a[text()=' Documents ']",
+
     // ========================
     // Overview Section Headings
     // ========================
     overviewHeading: "h2:has-text('Overview')",
     fundFactsHeading: "h3:has-text('Fund Facts')",
-    benchmarkLabel: "generic:has-text('Benchmark')",
+    benchmarkLabel: "//frk-fund-facts//dl//dt//span[text()='Benchmark']",
     additionalBenchmarkLabel: "generic:has-text('Additional Benchmark')",
     fundInceptionDateLabel: "generic:has-text('Fund Inception Date')",
     averageAnnualReturnsHeading: "h3:has-text('Average Annual Total Returns')",
     salesChargesHeading: "h3:has-text('Sales Charges, Expenses & Fees')",
     topSectorsHeading: "h2:has-text('Top Sectors')",
-    
+
     // ========================
     // Performance Section
     // ========================

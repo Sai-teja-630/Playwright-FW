@@ -512,24 +512,224 @@ I recorded [X] interactions across [Y] page(s).
 Extracting verified locators from the live DOM...
 ```
 
-For each captured interaction:
-  -> Navigate to the URL where the interaction occurred
-  -> Use Chrome DevTools MCP to analyze the element:
-     - `mcp_chrome-devtoo_navigate_page` — Navigate to each captured URL
-     - `mcp_chrome-devtoo_wait_for` — Wait for elements to load
-     - `mcp_chrome-devtoo_evaluate_script` — Extract element attributes and locators
-     - `mcp_chrome-devtoo_take_snapshot` — Capture page state for validation
+For each captured interaction, navigate to the URL where it occurred and run the
+extraction script below via `mcp_chrome-devtoo_evaluate_script`.
 
-  -> Verify the selector is unique and reliable
-  -> Prefer this selector strategy (in order):
-     1. `data-testid` attributes
-     2. `aria-label` / accessible name
-     3. CSS `#id` selectors
-     4. Stable XPath (matching existing workspace style)
-  -> Fall back to the selector style used in `referenceLocatorFile`
+### ⚠️ CRITICAL LOCATOR RULES — READ BEFORE GENERATING ANY SELECTOR
+
+**BANNED — Never use these under any circumstances:**
+- `generic:has-text('...')` — this is NOT a valid XPath or CSS selector
+- `text=...` — Playwright-only shorthand, not a real selector
+- `:has-text(...)` — Playwright-only pseudo-class, not a real selector
+- Any Playwright-specific locator API syntax in the selector string value
+- Position-only XPaths like `//div[3]/span[2]` — fragile, breaks on layout change
+
+All selector values stored in `Selectors/selectors.js` must be **real XPath expressions**
+or **real CSS selectors** that work directly in Chrome DevTools → Console → `$x(...)` or `$$(...)`.
+
+---
+
+### Selector Priority (apply strictly in this order)
+
+**Priority 1 — `data-testid` attribute (CSS)**
+Use when the element has a `data-testid` attribute.
+Format: `[data-testid='value']`
+Example: `[data-testid='login-button']`
+
+**Priority 2 — Stable unique `id` (XPath)**
+Use when the element has a unique, non-dynamic `id` (not auto-generated like `id_123abc`).
+Format: `//*[@id='elementId']`
+Example: `//*[@id='submitBtn']`
+
+**Priority 3 — `aria-label` or `role` + label (XPath)**
+Use when the element has a meaningful `aria-label` or `role`.
+Format: `//*[@aria-label='Label Text']`
+Example: `//*[@aria-label='Close dialog']`
+
+**Priority 4 — Semantic tag + attribute (XPath)**
+Use when the element has a stable attribute (name, type, placeholder, value, href, title).
+Format: `//tag[@attribute='value']`
+Examples:
+  `//input[@name='username']`
+  `//input[@placeholder='Enter email']`
+  `//button[@type='submit']`
+  `//a[@href='/dashboard']`
+  `//select[@name='country']`
+
+**Priority 5 — Exact visible text (XPath)**
+Use when the element's visible text is unique and stable (not dynamic data).
+Format: `//tag[normalize-space(text())='Exact Text']`
+Examples:
+  `//button[normalize-space(text())='Save Changes']`
+  `//h1[normalize-space(text())='Fund Inception Date']`
+  `//label[normalize-space(text())='Additional Benchmark']`
+
+**Priority 6 — Partial text match (XPath)**
+Use when exact text is too long or slightly variable but a keyword is stable.
+Format: `//tag[contains(text(),'Partial Text')]`
+Examples:
+  `//span[contains(text(),'Inception Date')]`
+  `//div[contains(text(),'Additional Benchmark')]`
+
+**Priority 7 — Ancestor → descendant scoped XPath**
+Use when the element itself has no stable attribute but its container does.
+Format: `//ancestor[@attr='val']//descendant-tag`
+Examples:
+  `//div[@class='fund-header']//button[contains(text(),'Edit')]`
+  `//form[@id='loginForm']//input[@type='password']`
+  `//*[@data-section='performance']//table//tr[1]//td[2]`
+
+**Priority 8 — CSS class (last resort, only if class is stable and unique)**
+Use ONLY when no other strategy works. Avoid dynamic or utility CSS classes.
+Format: `.stable-class-name` or `tag.stable-class`
+Example: `button.primary-action`, `input.search-field`
+
+---
+
+### Extraction Script
+
+Run this via `mcp_chrome-devtoo_evaluate_script` for each element.
+Pass the element's visible text or known attribute to locate it:
+
+```javascript
+(function extractLocator(searchText) {
+  // Helper: check if XPath returns exactly 1 element
+  function xpathUnique(expr) {
+    try {
+      const result = document.evaluate(expr, document, null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+      return result.snapshotLength === 1 ? expr : null;
+    } catch(e) { return null; }
+  }
+
+  // Helper: check if CSS selector returns exactly 1 element
+  function cssUnique(sel) {
+    try {
+      const els = document.querySelectorAll(sel);
+      return els.length === 1 ? sel : null;
+    } catch(e) { return null; }
+  }
+
+  // Find candidate elements by visible text
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+  let el = null;
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const txt = (node.innerText || node.textContent || '').trim();
+    if (txt === searchText || node.getAttribute('aria-label') === searchText ||
+        node.getAttribute('placeholder') === searchText ||
+        node.getAttribute('data-testid') === searchText) {
+      el = node; break;
+    }
+  }
+  if (!el) return { error: 'Element not found for: ' + searchText };
+
+  const tag = el.tagName.toLowerCase();
+  const id = el.id;
+  const testId = el.getAttribute('data-testid');
+  const ariaLabel = el.getAttribute('aria-label');
+  const name = el.getAttribute('name');
+  const placeholder = el.getAttribute('placeholder');
+  const type = el.getAttribute('type');
+  const href = el.getAttribute('href');
+  const text = (el.innerText || el.textContent || '').trim().slice(0, 80);
+
+  let selector = null;
+  let strategy = null;
+
+  // Priority 1: data-testid
+  if (testId) {
+    selector = cssUnique(`[data-testid='${testId}']`);
+    strategy = 'data-testid (CSS)';
+  }
+  // Priority 2: unique id
+  if (!selector && id && !/\d{4,}/.test(id)) {
+    selector = xpathUnique(`//*[@id='${id}']`);
+    strategy = 'id (XPath)';
+  }
+  // Priority 3: aria-label
+  if (!selector && ariaLabel) {
+    selector = xpathUnique(`//*[@aria-label='${ariaLabel}']`);
+    strategy = 'aria-label (XPath)';
+  }
+  // Priority 4a: name attribute
+  if (!selector && name) {
+    selector = xpathUnique(`//${tag}[@name='${name}']`);
+    strategy = 'name attribute (XPath)';
+  }
+  // Priority 4b: placeholder
+  if (!selector && placeholder) {
+    selector = xpathUnique(`//${tag}[@placeholder='${placeholder}']`);
+    strategy = 'placeholder (XPath)';
+  }
+  // Priority 4c: type + value for buttons
+  if (!selector && type === 'submit') {
+    selector = xpathUnique(`//${tag}[@type='submit']`);
+    strategy = 'type=submit (XPath)';
+  }
+  // Priority 4d: href for links
+  if (!selector && href) {
+    selector = xpathUnique(`//a[@href='${href}']`);
+    strategy = 'href (XPath)';
+  }
+  // Priority 5: exact text
+  if (!selector && text) {
+    selector = xpathUnique(`//${tag}[normalize-space(text())='${text}']`);
+    strategy = 'exact text (XPath)';
+  }
+  // Priority 6: contains text
+  if (!selector && text) {
+    const keyword = text.split(' ').slice(0, 3).join(' ');
+    selector = xpathUnique(`//${tag}[contains(text(),'${keyword}')]`);
+    strategy = 'partial text (XPath)';
+  }
+  // Priority 7: scoped ancestor XPath
+  if (!selector) {
+    const parent = el.parentElement;
+    if (parent) {
+      const parentId = parent.id;
+      const parentTestId = parent.getAttribute('data-testid');
+      if (parentId) {
+        selector = xpathUnique(`//*[@id='${parentId}']//${tag}`);
+        strategy = 'ancestor id scoped (XPath)';
+      } else if (parentTestId) {
+        selector = xpathUnique(`//*[@data-testid='${parentTestId}']//${tag}`);
+        strategy = 'ancestor testid scoped (XPath)';
+      }
+    }
+  }
+
+  return {
+    selector: selector || 'MANUAL_REVIEW_NEEDED',
+    strategy: strategy || 'none — manual review required',
+    tag, id, testId, ariaLabel, name, placeholder, type, href,
+    visibleText: text,
+    warning: !selector ? 'No stable selector found — inspect element manually in DevTools' : null
+  };
+})('REPLACE_WITH_SEARCH_TEXT');
+```
+
+### After Extraction — Validate Uniqueness
+
+For every extracted selector, verify uniqueness in Chrome DevTools console:
+- XPath: `$x("//your/xpath")` must return exactly 1 element
+- CSS: `$$("[data-testid='val']")` must return exactly 1 element
+
+If more than 1 element is returned:
+1. Add an ancestor scope to narrow it (Priority 7)
+2. Or add an index only as a last resort: `(//xpath)[1]`
+
+### MANUAL_REVIEW_NEEDED handling
+
+If extraction returns `MANUAL_REVIEW_NEEDED`:
+- Display a warning in the summary: `⚠️ [stepN] — Selector needs manual review`
+- Use a placeholder comment in the selector file: `// TODO: manual selector needed for [element]`
+- Do NOT use `generic:has-text()` or any Playwright shorthand as a fallback
 
 ```
-Locator extraction complete. All locators validated against live DOM.
+Locator extraction complete. All selectors validated against live DOM.
+Selector strategies used: [list strategies per element]
+⚠️ Manual review needed for: [list any MANUAL_REVIEW_NEEDED elements, or "None"]
 ```
 
 Locator output format mirrors `referenceLocatorFile` exactly.
@@ -568,55 +768,83 @@ Proceed? Type  Yes  or describe changes.
 
 ### Sub-Phase 1: Locator File Generation
 
-Create or update locator file for the module.
-Match `referenceLocatorFile` exactly: same format, selector type, key naming, structure.
-All locator values are Chrome DevTools-verified.
+**STRICT RULE — NO NEW LOCATOR FILES EVER.**
+Always append new selectors into the **existing** `Selectors/selectors.js`.
+Never create a new locator/selector file regardless of the page or feature being tested.
 
-For this workspace, follow **this exact pattern** from `Selectors/selectors.js`:
+Steps:
+1. Read the existing `Selectors/selectors.js` file.
+2. Identify only the **new** selectors needed (keys that do not already exist).
+3. **Append** the new keys under a new comment section inside the existing `locators` object — before the closing `};`.
+4. Leave all existing keys untouched.
+
+Pattern to append (inside existing `locators = { ... }`):
 
 ```javascript
-const locators = {
     // ========================
     // [Page Name] Selectors
     // ========================
-    objElementName: "//xpath[@or='css-selector']",
-    ...
-};
 
-module.exports = { locators };
+    // XPath by id:           "//*[@id='elementId']"
+    // XPath by testid (CSS): "[data-testid='element-name']"
+    // XPath by aria-label:   "//*[@aria-label='Label Text']"
+    // XPath by name attr:    "//input[@name='fieldName']"
+    // XPath by placeholder:  "//input[@placeholder='Enter value']"
+    // XPath by exact text:   "//button[normalize-space(text())='Save']"
+    // XPath by partial text: "//span[contains(text(),'Fund Inception')]"
+    // XPath scoped:          "//div[@id='section']//button[contains(text(),'Edit')]"
+
+    objElementName: "//tag[@attribute='value']",
 ```
 
-**CRITICAL**: If `Selectors/selectors.js` already exists (it does in this workspace), **APPEND** the new selectors to the existing file under a new comment section. Never overwrite existing selectors.
+**NEVER use:** `generic:has-text()`, `text=...`, `:has-text(...)`, or any Playwright shorthand.
+All values must be real XPath or CSS selectors verifiable in Chrome DevTools console via `$x(...)` or `$$(...)`.
+
+**NEVER** create a new file. **NEVER** overwrite or replace the existing file. Only use an append/edit operation on `Selectors/selectors.js`.
 
 ---
 
 ### Sub-Phase 2: Page Object Generation
 
-After confirmation:
-- **Existing file matches** → add ONLY new methods; preserve every line of existing code
-- **No matching file** → create new, mirroring `referencePageObjectFile` exactly
+**STRICT RULE — PREFER EXISTING PAGE FILES. DO NOT CREATE NEW PAGE FILES UNLESS ABSOLUTELY NECESSARY.**
 
-For this workspace, follow **this exact pattern** from `page/AppInHomePage.js`:
+Decision logic (apply in order):
 
+1. **Check Step 11 reuse analysis results.**
+   - If all actions are covered by existing methods → **no changes to any page file**; reference the single existing method in the test spec.
+
+2. **If new actions are needed**, identify which existing page file best matches the page context (by URL path, page name, or feature area).
+   - **Found a matching existing file** → **EDIT that file only**: append the single new method at the bottom of the class, above the closing brace. Preserve every existing line exactly.
+   - **No existing file matches at all** → Only then create a new page file, mirroring `referencePageObjectFile` exactly.
+
+**A "new page" is NOT justified simply because the test case is new.** Only create a new page file when the feature/page being tested has zero existing page object coverage in `pagesDir`.
+
+---
+
+**CRITICAL METHOD RULE — ONE METHOD PER TEST CASE. NO EXCEPTIONS.**
+
+All steps captured from the user's prompt flow (from start to `stop`) MUST be combined into a **single method**. Do NOT create one method per step or per action.
+
+- Name the method after the test case scenario (e.g., `TC_NNN_[scenarioName]`).
+- Every recorded action — clicks, fills, selects, asserts, navigations — goes **sequentially inside that one method**.
+- The test spec calls this one method only.
+
+CORRECT — all steps in one method:
 ```javascript
-const { locators } = require("../Selectors/selectors");
-const { BasePage } = require("./BasePage");
-
-class [PageName]Page extends BasePage {
-
-    constructor(page) {
-        super(page);
+    async TC_002_loginWithValidCredentials() {
+        await this.webActions.typeText(locators.objUsernameInput, "admin", "Enter username");
+        await this.webActions.typeText(locators.objPasswordInput, "password", "Enter password");
+        await this.webActions.clickElement(locators.objLoginButton, "Click Login button");
+        await this.webActions.verifyElementVisible(locators.objDashboardHeader, "Verify dashboard is visible");
     }
+```
 
-    async [methodName]() {
-        await this.webActions.[actionMethod](
-            locators.[selectorKey],
-            "[Description]"
-        );
-    }
-}
-
-module.exports = { [PageName]Page };
+WRONG — do NOT split into separate methods per step:
+```javascript
+    async enterUsername() { ... }
+    async enterPassword() { ... }
+    async clickLogin() { ... }
+    async verifyDashboard() { ... }
 ```
 
 **Key rules:**
@@ -625,6 +853,7 @@ module.exports = { [PageName]Page };
 - Use `this.webActions.clickElement()`, `this.webActions.typeText()`, etc.
 - Import locators from `../Selectors/selectors`
 - Use `module.exports = { ClassName }` (CommonJS, destructured)
+- **One method per test case. All steps inside it. Always.**
 
 ---
 
@@ -676,10 +905,8 @@ test.describe('[Test suite description]', () => {
     });
 
     test(`${testCaseID} - ${testCaseDesc}`, async ({ [pageFixtureName] }) => {
-        // Step-by-step actions using page object methods
-        await [pageFixtureName].[method1]();
-        await [pageFixtureName].[method2]();
-        // ...
+        // All steps are encapsulated in a single method named after the test case
+        await [pageFixtureName].TC_[NNN]_[scenarioName]();
     });
 
 });
@@ -691,6 +918,7 @@ test.describe('[Test suite description]', () => {
 - Use `test.describe` and `test` keywords
 - Include `beforeAll` and `afterAll` hooks with console logging
 - Auto-increment test case ID based on existing test files
+- **The test body calls exactly ONE method on the page object — the single method that contains all steps**
 
 ---
 
@@ -726,17 +954,17 @@ For this workspace, follow the JSON format from `testData/testData.json`:
 REUSED FROM EXISTING PAGE OBJECTS (no changes):
     [path/existing_file]  ->  [method()]  (covers: [action])
 
-FILES UPDATED (new methods added):
-    [path/existing_file]  -- added: [method names]
+FILES UPDATED (appended — existing files only, no new files created):
+    [Selectors/selectors.js]  -- appended: [new selector keys under new section comment]
+    [path/existing_page_file] -- added methods: [method names]
+    [utils/fixtures.js]       -- added fixture: [pageFixtureName] (only if new page file was created)
+    [testData/testData.json]  -- merged new entry: TC_[NNN]
 
-FILES CREATED:
-    [path/page_file]      (Page Object  — mirrors [referencePageObjectFile])
-    [path/locator_file]   (Locators     — mirrors [referenceLocatorFile])
-    [path/test_file]      (Test Spec    — mirrors [referenceTestFile])
-    [path/data_file]      (Test Data    — mirrors [referenceDataFile])
+FILE CREATED (test spec only — one new file per test case):
+    [path/test_file]      (Test Spec — mirrors [referenceTestFile])
 
-FILES UPDATED:
-    [utils/fixtures.js]   (Fixture registration — added [pageFixtureName])
+⚠️  RULE REMINDER: Selector files and Page Object files are NEVER newly created.
+    They are always appended/edited in place. Only the test spec (.spec.js) is a new file.
 
 QUALITY
     Pattern consistency:  matches workspace profile
@@ -825,11 +1053,11 @@ Step 9:  Launch browser → user types prompts → agent executes → records
 Step 10: Chrome DevTools locator extraction → verified selectors
 Step 11: Reuse analysis (existing page objects)
 Step 12: Generate scripts:
-    → Locator files (verified values, appended to existing)
-    → Page Objects (new methods only, or new files)
-    → Fixture registration (auto-update utils/fixtures.js)
-    → Test specs (matching reference exactly)
-    → Test data (merged with existing)
+    → Selectors/selectors.js   (APPEND new keys only — never create new file)
+    → Page Object in page/     (APPEND new methods to existing file — create new only if zero coverage exists)
+    → utils/fixtures.js        (APPEND new fixture — only if new page file was created)
+    → testData/testData.json   (MERGE new entry — never overwrite)
+    → tests/TC_NNN_*.spec.js   (CREATE new file — this is the ONLY new file per test case)
     → Final summary
 ```
 
@@ -923,7 +1151,7 @@ Pre-detected workspace patterns (for this specific repository):
 | Tests dir              | `tests/`                                                  |
 | Test data dir          | `testData/`                                               |
 | Locator format         | JS object export (`const locators = {...}`)               |
-| Selector type          | Mixed (XPath primary, CSS secondary)                      |
+| Selector type          | XPath primary (`//*[@id]`, `[@attr]`, `[text()]`, `[contains()]`), CSS only for `data-testid` |
 | Key naming             | camelCase (prefixed with `obj` for generic elements)      |
 | Base class             | `BasePage` from `./BasePage`                              |
 | Browser access         | `this.page` (via BasePage constructor)                    |

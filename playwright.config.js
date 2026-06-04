@@ -1,6 +1,5 @@
 // Playwright Configuration
 const { defineConfig, devices } = require('@playwright/test');
-const path = require('path');
 require('dotenv').config();
 
 // ============================================================
@@ -40,6 +39,8 @@ const spec = [
  * Playwright Configuration
  */
 const config = defineConfig({
+    globalSetup: require.resolve('./global-setup.js'),
+    globalTeardown: require.resolve('./global-teardown.js'),
     testDir: './tests',
     testMatch: spec.length > 0 ? spec : undefined,
 
@@ -64,17 +65,16 @@ const config = defineConfig({
 
     ],
 
-    globalSetup: require.resolve('./global-setup.js'),
-    globalTeardown: require.resolve('./global-teardown.js'),
+
 
     use: {
         baseURL: (require('./testData/url.json')[process.env.ENV || 'test'])?.URL,
         headless: process.env.HEADED === 'false' || !process.env.HEADED,
         viewport: null,
         ignoreHTTPSErrors: true,
-        screenshot: 'only-on-failure',
-        video: 'retain-on-failure',
-        trace: 'retain-on-failure',
+        screenshot: 'off',
+        video: 'off',
+        trace: 'off',
         launchOptions: {
             args: ['--incognito', '--start-maximized'],
         },
